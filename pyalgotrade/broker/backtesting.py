@@ -181,7 +181,7 @@ class Broker(broker.Broker):
     :type commission: :class:`Commission`
     """
 
-    LOGGER_NAME = "broker.backtesting"
+    LOGGER_NAME = "-broker.backtesting"
 
     def __init__(self, cash, barFeed, commission=None):
         broker.Broker.__init__(self)
@@ -535,10 +535,10 @@ class ForexBroker(Broker):
     :type commission: :class:`Commission`
     """
 
-    LOGGER_NAME = "broker.backtesting"
+    LOGGER_NAME = "forexbroker.backtesting"
 
     def __init__(self, cash, barFeed, commission=None):
-        broker.Broker.__init__(self)
+        Broker.__init__(self, cash, barFeed, commission)
 
         assert(cash >= 0)
         self.__cash = cash
@@ -551,7 +551,7 @@ class ForexBroker(Broker):
         self.__activeOrders = {}
         self.__useAdjustedValues = False
         self.__fillStrategy = fillstrategy.DefaultStrategy()
-        self.__logger = logger.getLogger(Broker.LOGGER_NAME)
+        self.__logger = logger.getLogger(ForexBroker.LOGGER_NAME)
 
         # It is VERY important that the broker subscribes to barfeed events before the strategy.
         barFeed.getNewValuesEvent().subscribe(self.onBars)

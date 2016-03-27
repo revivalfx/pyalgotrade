@@ -629,10 +629,10 @@ class ForexBacktestingStrategy(BaseStrategy):
         # The broker should subscribe to barFeed events before the strategy.
         # This is to avoid executing orders submitted in the current tick.
 
-        if isinstance(cash_or_brk, pyalgotrade.broker.Broker):
+        if isinstance(cash_or_brk, pyalgotrade.broker.backtesting.ForexBroker):
             broker = cash_or_brk
         else:
-            broker = backtesting.Broker(cash_or_brk, barFeed)
+            broker = backtesting.ForexBroker(cash_or_brk, barFeed)
 
         BaseStrategy.__init__(self, barFeed, broker)
         self.__useAdjustedValues = False
