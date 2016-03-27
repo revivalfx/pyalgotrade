@@ -133,7 +133,7 @@ class BaseTestCase(common.TestCase):
     TestInstrument = "orcl"
 
     def buildBroker(self, *args, **kwargs):
-        return backtesting.Broker(*args, **kwargs)
+        return backtesting.ForexBroker(*args, **kwargs)
 
     def buildBarFeed(self, *args, **kwargs):
         return BarFeed(*args, **kwargs)
@@ -191,7 +191,7 @@ class BrokerTestCase(BaseTestCase):
         barFeed.dispatchBars(10, 15, 5, 12)
 
         # Only one order (the sell limit order) should have got filled. The other one should be canceled.
-        self.assertEqual(brk.getShares(BaseTestCase.TestInstrument), 0)
+        self.assertEqual(brk.getLotSize(BaseTestCase.TestInstrument), 0)
         self.assertTrue(orders["sell"].isFilled())
         self.assertTrue(orders["stoploss"].isCanceled())
 
@@ -455,7 +455,7 @@ class MarketOrderTestCase(BaseTestCase):
     def testGetPositions(self):
         barFeed = self.buildBarFeed(BaseTestCase.TestInstrument, bar.Frequency.MINUTE)
         cash = 1000000
-        brk = backtesting.Broker(cash, barFeed)
+        brk = backtesting.ForexBroker(cash, barFeed)
 
         # Buy
         order = brk.createMarketOrder(broker.Order.Action.BUY, BaseTestCase.TestInstrument, 1)
@@ -472,7 +472,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEquals(brk.getPositions().get(BaseTestCase.TestInstrument), None)
 
     def testBuyPartialWithTwoDecimals(self):
-        class Broker(backtesting.Broker):
+        class Broker(backtesting.ForexBroker):
             def getInstrumentTraits(self, instrument):
                 return DecimalTraits(2)
 
@@ -493,7 +493,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getFilled(), 138.75)
         self.assertEqual(order.getRemaining(), 361.25)
         self.assertEqual(order.getAvgFillPrice(), 12.03)
-        self.assertEqual(brk.getShares(BaseTestCase.TestInstrument), 138.75)
+        self.assertEqual(brk.getLotSize(BaseTestCase.TestInstrument), 138.75)
         self.assertEqual(brk.getEquity(), cash)
         self.assertEqual(brk.getFillStrategy().getVolumeLeft()[BaseTestCase.TestInstrument], 0)
 
@@ -504,7 +504,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getFilled(), 500)
         self.assertEqual(order.getRemaining(), 0)
         self.assertEqual(order.getAvgFillPrice(), 12.03)
-        self.assertEqual(brk.getShares(BaseTestCase.TestInstrument), 500)
+        self.assertEqual(brk.getLotSize(BaseTestCase.TestInstrument), 500)
         self.assertEqual(brk.getEquity(), cash)
         self.assertEqual(brk.getFillStrategy().getVolumeLeft()[BaseTestCase.TestInstrument], 586.25 - 361.25)
 
@@ -513,7 +513,7 @@ class MarketOrderTestCase(BaseTestCase):
         cashPresicion = 2
         maxFill = 0.25
 
-        class Broker(backtesting.Broker):
+        class Broker(backtesting.ForexBroker):
             def getInstrumentTraits(self, instrument):
                 return DecimalTraits(quantityPresicion)
 
@@ -540,7 +540,7 @@ class MarketOrderTestCase(BaseTestCase):
             self.assertEqual(order.getFilled(), round(cumFilled, quantityPresicion))
             self.assertEqual(order.getRemaining(), 1 - cumFilled)
             self.assertEqual(round(order.getAvgFillPrice(), cashPresicion), 12.03)
-            self.assertEqual(brk.getShares(BaseTestCase.TestInstrument), round(cumFilled, quantityPresicion))
+            self.assertEqual(brk.getLotSize(BaseTestCase.TestInstrument), round(cumFilled, quantityPresicion))
             self.assertEqual(round(brk.getEquity(), cashPresicion), cash)
             self.assertEqual(round(brk.getFillStrategy().getVolumeLeft()[BaseTestCase.TestInstrument], quantityPresicion), 0)
 
@@ -554,7 +554,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getFilled(), 1)
         self.assertEqual(order.getRemaining(), 0)
         self.assertEqual(order.getAvgFillPrice(), 12.03)
-        self.assertEqual(brk.getShares(BaseTestCase.TestInstrument), 1)
+        self.assertEqual(brk.getLotSize(BaseTestCase.TestInstrument), 1)
         self.assertEqual(brk.getEquity(), cash)
         self.assertEqual(round(brk.getFillStrategy().getVolumeLeft()[BaseTestCase.TestInstrument], quantityPresicion), round((volume*maxFill) - (1-filledSoFar), quantityPresicion))
 
@@ -643,7 +643,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 1)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 2)
         self.assertEqual(order.getFilled(), 1)
         self.assertEqual(order.getRemaining(), 0)
@@ -663,7 +663,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 11)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
         self.assertEqual(order.getFilled(), 1)
         self.assertEqual(order.getRemaining(), 0)
@@ -687,7 +687,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo() is None)
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 1)
         self.assertEqual(order.getFilled(), 0)
         self.assertEqual(order.getRemaining(), 1)
@@ -700,7 +700,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo() is None)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 1)
         self.assertEqual(order.getFilled(), 0)
         self.assertEqual(order.getRemaining(), 1)
@@ -726,7 +726,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo() is None)
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 1)
         self.assertEqual(order.getFilled(), 0)
         self.assertEqual(order.getRemaining(), 1)
@@ -739,7 +739,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getPrice() == 2)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 3)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 1)
         self.assertEqual(order.getFilled(), 1)
         self.assertEqual(order.getRemaining(), 0)
@@ -762,7 +762,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(round(brk.getCash(), 1) == 0.4)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 2)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 2)
         self.assertEqual(order.getFilled(), 2)
         self.assertEqual(order.getRemaining(), 0)
 
@@ -780,7 +780,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(round(brk.getCash(), 1) == 10.4)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertEqual(order.getFilled(), 1)
         self.assertEqual(order.getRemaining(), 0)
 
@@ -798,7 +798,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(round(brk.getCash(), 1) == 21.4)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertEqual(order.getFilled(), 1)
         self.assertEqual(order.getRemaining(), 0)
 
@@ -821,7 +821,7 @@ class MarketOrderTestCase(BaseTestCase):
 
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 1)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
 
         barFeed.dispatchBars(11, 11, 11, 11)
         self.assertEqual(brk.getEquity(), 11 + 1)
@@ -845,7 +845,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 10)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 100)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 100)
         self.assertEqual(order.getFilled(), 100)
         self.assertEqual(order.getRemaining(), 0)
 
@@ -868,7 +868,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getRemaining(), 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 1200)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -1)
         barFeed.dispatchBars(100, 100, 100, 100)
         self.assertTrue(brk.getEquity() == 1000 + 100)
         barFeed.dispatchBars(0, 0, 0, 0)
@@ -891,7 +891,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getRemaining(), 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 1000)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
 
     def testSellShort_2(self):
         barFeed = self.buildBarFeed(BaseTestCase.TestInstrument, bar.Frequency.MINUTE)
@@ -911,7 +911,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getAvgFillPrice(), 100)
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(brk.getCash() == 1100)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -1)
         barFeed.dispatchBars(100, 100, 100, 100)
         self.assertTrue(brk.getEquity() == 1000)
         barFeed.dispatchBars(0, 0, 0, 0)
@@ -934,7 +934,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertEqual(order.getFilled(), 2)
         self.assertEqual(order.getRemaining(), 0)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(brk.getCash() == 1000)  # +50 from short sell operation, -50 from buy operation.
         barFeed.dispatchBars(50, 50, 50, 50)
         self.assertTrue(brk.getEquity() == 1000 + 50)
@@ -954,7 +954,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getRemaining(), 0)
         self.assertEqual(order.getAvgFillPrice(), 100)
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         barFeed.dispatchBars(70, 70, 70, 70)
         self.assertTrue(brk.getEquity() == 1000 + 50 + 50)
 
@@ -975,7 +975,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.isFilled())
         self.assertEqual(order.getAvgFillPrice(), 100)
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(brk.getCash() == 0)
 
         # Sell 2
@@ -991,7 +991,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.isFilled())
         self.assertEqual(order.getAvgFillPrice(), 100)
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -1)
         self.assertTrue(brk.getCash() == 200)
 
         # Buy 1
@@ -1007,7 +1007,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getRemaining(), 0)
         self.assertEqual(order.getAvgFillPrice(), 100)
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(brk.getCash() == 100)
 
     def testSellShortWithCommission(self):
@@ -1030,7 +1030,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertEqual(order.getAvgFillPrice(), sharePrice)
         self.assertTrue(order.getExecutionInfo().getCommission() == 10)
         self.assertTrue(brk.getCash() == 2000)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -10)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -10)
 
         # Buy the 10 shares sold short plus 9 extra
         order = brk.createMarketOrder(broker.Order.Action.BUY_TO_COVER, BaseTestCase.TestInstrument, 19)
@@ -1045,7 +1045,7 @@ class MarketOrderTestCase(BaseTestCase):
         self.assertTrue(order.isFilled())
         self.assertEqual(order.getAvgFillPrice(), sharePrice)
         self.assertTrue(order.getExecutionInfo().getCommission() == 10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 9)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 9)
         self.assertTrue(brk.getCash() == sharePrice - commission)
 
     def testCancel(self):
@@ -1156,7 +1156,7 @@ class MarketOrderTestCase(BaseTestCase):
     def testDailyMarketOnClose(self):
         barFeed = self.buildBarFeed(BaseTestCase.TestInstrument, bar.Frequency.DAY)
         cash = 1000000
-        brk = backtesting.Broker(cash, barFeed)
+        brk = backtesting.ForexBroker(cash, barFeed)
 
         # Buy
         order = brk.createMarketOrder(broker.Order.Action.BUY, BaseTestCase.TestInstrument, 2, onClose=True)
@@ -1175,7 +1175,7 @@ class MarketOrderTestCase(BaseTestCase):
     def testIntradayMarketOnClose(self):
         barFeed = self.buildBarFeed(BaseTestCase.TestInstrument, bar.Frequency.MINUTE)
         cash = 1000000
-        brk = backtesting.Broker(cash, barFeed)
+        brk = backtesting.ForexBroker(cash, barFeed)
 
         with self.assertRaisesRegexp(Exception, "Market-on-close not supported with intraday feeds"):
             brk.createMarketOrder(broker.Order.Action.BUY, BaseTestCase.TestInstrument, 1, onClose=True)
@@ -1269,7 +1269,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 2)
 
         # Sell
@@ -1289,7 +1289,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 25)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
 
     def testBuyAndSell_GetBetterPrice(self):
@@ -1313,7 +1313,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 8)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 2)
 
         # Sell
@@ -1333,7 +1333,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 24)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
 
     def testBuyAndSell_GappingBars(self):
@@ -1357,7 +1357,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 2)
 
         # Sell. Bar is above the target price.
@@ -1377,7 +1377,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 45)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
 
     def testFailToBuy(self):
@@ -1401,7 +1401,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo() is None)
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 1)
 
         # Fail to buy (couldn't get specific price). Canceled due to session close.
@@ -1414,7 +1414,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo() is None)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 1)
 
     def testBuy_GTC(self):
@@ -1440,7 +1440,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo() is None)
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 1)
 
         # Buy
@@ -1453,7 +1453,7 @@ class LimitOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getPrice() == 2)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 6)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 2)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 2)
         self.assertTrue(cb.eventCount == 1)
 
 
@@ -1686,7 +1686,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 2)
 
         # Create stop loss order.
@@ -1703,7 +1703,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertFalse(order.isFilled())
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 1)
         barFeed.dispatchBars(10, 15, 8, 12)  # Stop loss hit.
         self.assertEqual(order.getFilled(), 1)
@@ -1713,7 +1713,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getPrice() == 9)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 5+9)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
 
     def testLongPosStopLoss_GappingBars(self):
@@ -1737,7 +1737,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 2)
 
         # Create stop loss order.
@@ -1754,7 +1754,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertEqual(order.getRemaining(), 1)
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 1)
         self.assertTrue(cb.eventCount == 1)
         barFeed.dispatchBars(5, 8, 4, 7)  # Stop loss hit.
         self.assertTrue(order.isFilled())
@@ -1764,7 +1764,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getPrice() == 5)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 5+5)  # Fill the stop loss order at open price.
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
 
     def testShortPosStopLoss(self):
@@ -1788,7 +1788,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 15+10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -1)
         self.assertTrue(cb.eventCount == 2)
 
         # Create stop loss order.
@@ -1805,7 +1805,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertEqual(order.getRemaining(), 1)
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 15+10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -1)
         self.assertTrue(cb.eventCount == 1)
         barFeed.dispatchBars(10, 15, 8, 12)  # Stop loss hit.
         self.assertTrue(order.isFilled())
@@ -1814,7 +1814,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getPrice() == 11)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 15-1)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
 
     def testShortPosStopLoss_GappingBars(self):
@@ -1838,7 +1838,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getCommission() == 0)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 15+10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -1)
         self.assertTrue(cb.eventCount == 2)
 
         # Create stop loss order.
@@ -1855,7 +1855,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertEqual(order.getRemaining(), 1)
         self.assertTrue(len(brk.getActiveOrders()) == 1)
         self.assertTrue(brk.getCash() == 15+10)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == -1)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == -1)
         self.assertTrue(cb.eventCount == 1)
         barFeed.dispatchBars(15, 20, 13, 14)  # Stop loss hit.
         self.assertTrue(order.isFilled())
@@ -1865,7 +1865,7 @@ class StopOrderTestCase(BaseTestCase):
         self.assertTrue(order.getExecutionInfo().getPrice() == 15)
         self.assertTrue(len(brk.getActiveOrders()) == 0)
         self.assertTrue(brk.getCash() == 15-5)
-        self.assertTrue(brk.getShares(BaseTestCase.TestInstrument) == 0)
+        self.assertTrue(brk.getLotSize(BaseTestCase.TestInstrument) == 0)
         self.assertTrue(cb.eventCount == 2)
 
 

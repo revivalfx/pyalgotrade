@@ -84,6 +84,37 @@ class BaseTestStrategy(strategy.BacktestingStrategy):
         self.posExecutionInfo.append(position.getExitOrder().getExecutionInfo())
 
 
+class BaseForexTestStrategy(strategy.ForexBacktestingStrategy):
+    def __init__(self, barFeed, instrument, cash=1000000):
+        strategy.BacktestingStrategy.__init__(self, barFeed, cash)
+        self.instrument = instrument
+        self.orderUpdatedCalls = 0
+        self.enterOkCalls = 0
+        self.enterCanceledCalls = 0
+        self.exitOkCalls = 0
+        self.exitCanceledCalls = 0
+        self.posExecutionInfo = []
+
+    def onOrderUpdated(self, order):
+        self.orderUpdatedCalls += 1
+
+    def onEnterOk(self, position):
+        self.enterOkCalls += 1
+        self.posExecutionInfo.append(position.getEntryOrder().getExecutionInfo())
+
+    def onEnterCanceled(self, position):
+        self.enterCanceledCalls += 1
+        self.posExecutionInfo.append(position.getEntryOrder().getExecutionInfo())
+
+    def onExitOk(self, position):
+        self.exitOkCalls += 1
+        self.posExecutionInfo.append(position.getExitOrder().getExecutionInfo())
+
+    def onExitCanceled(self, position):
+        self.exitCanceledCalls += 1
+        self.posExecutionInfo.append(position.getExitOrder().getExecutionInfo())
+
+
 class TestStrategy(BaseTestStrategy):
     def __init__(self, barFeed, instrument, cash):
         BaseTestStrategy.__init__(self, barFeed, instrument, cash)
@@ -92,6 +123,7 @@ class TestStrategy(BaseTestStrategy):
         # Maps dates to a tuple of (method, params)
         self.__posEntry = {}
         self.__posExit = {}
+        self.__takeProfit = {}
 
         self.__result = 0
         self.__netProfit = 0
@@ -232,6 +264,174 @@ class ExitEntryNotFilledStrategy(BaseTestStrategy):
 
 
 class ResubmitExitStrategy(BaseTestStrategy):
+    def onStart(self):
+        self.position = None
+        self.exitRequestCanceled = False
+
+    def onBars(self, bars):
+        if self.position is None:
+            self.position = self.enterLong(self.instrument, 1)
+        elif self.position.entryFilled() and not self.position.exitFilled():
+            self.position.exitMarket()
+            if not self.exitRequestCanceled:
+                self.position.cancelExit()
+                self.exitRequestCanceled = True
+
+
+
+class ForexTestStrategy(BaseForexTestStrategy):
+    def __init__(self, barFeed, instrument, cash):
+        BaseTestStrategy.__init__(self, barFeed, instrument, cash)
+
+        self.__activePosition = None
+        # Maps dates to a tuple of (method, params)
+        self.__posEntry = {}
+        self.__posExit = {}
+        self.__takeProfit = {}
+
+        self.__result = 0
+        self.__netProfit = 0
+        self.positions = []
+
+    def addPosEntry(self, dateTime, enterMethod, *args, **kwargs):
+        self.__posEntry.setdefault(dateTime, [])
+        self.__posEntry[dateTime].append((enterMethod, args, kwargs))
+
+    def addPosExit(self, dateTime, *args, **kwargs):
+        self.__posExit.setdefault(dateTime, [])
+        self.__posExit[dateTime].append((position.Position.exit, args, kwargs))
+
+    def addPosExitMarket(self, dateTime, *args, **kwargs):
+        self.__posExit.setdefault(dateTime, [])
+        self.__posExit[dateTime].append((position.Position.exitMarket, args, kwargs))
+
+    def addPosExitLimit(self, dateTime, *args, **kwargs):
+        self.__posExit.setdefault(dateTime, [])
+        self.__posExit[dateTime].append((position.Position.exitLimit, args, kwargs))
+
+    def addPosExitStop(self, dateTime, *args, **kwargs):
+        self.__posExit.setdefault(dateTime, [])
+        self.__posExit[dateTime].append((position.Position.exitStop, args, kwargs))
+
+    def addPosExitTakeProfit(self, dateTime, *args, **kwargs):
+        self.__takeProfit.setdefault(dateTime, [])
+        self.__takeProfit[dateTime].append((position.Position.exitStop, args, kwargs))
+
+    def addPosExitStopLimit(self, dateTime, *args, **kwargs):
+        self.__posExit.setdefault(dateTime, [])
+        self.__posExit[dateTime].append((position.Position.exitStopLimit, args, kwargs))
+
+    def getResult(self):
+        return self.__result
+
+    def getNetProfit(self):
+        return self.__netProfit
+
+    def getActivePosition(self):
+        return self.__activePosition
+
+    def onEnterOk(self, position):
+        # print "Enter ok", position.getEntryOrder().getExecutionInfo().getDateTime()
+        BaseTestStrategy.onEnterOk(self, position)
+        if self.__activePosition is None:
+            self.__activePosition = position
+            assert(position.isOpen())
+            assert(len(position.getActiveOrders()) != 0)
+            assert(position.getShares() != 0)
+
+    def onEnterCanceled(self, position):
+        # print "Enter canceled", position.getEntryOrder().getExecutionInfo().getDateTime()
+        BaseTestStrategy.onEnterCanceled(self, position)
+        self.__activePosition = None
+        assert(not position.isOpen())
+        assert(len(position.getActiveOrders()) == 0)
+        assert(position.getShares() == 0)
+
+    def onExitOk(self, position):
+        # print "Exit ok", position.getExitOrder().getExecutionInfo().getDateTime()
+        BaseTestStrategy.onExitOk(self, position)
+        self.__result += position.getReturn()
+        self.__netProfit += position.getNetProfit()
+        self.__activePosition = None
+        assert(not position.isOpen())
+        assert(len(position.getActiveOrders()) == 0)
+        assert(position.getShares() == 0)
+
+    def onExitCanceled(self, position):
+        # print "Exit canceled", position.getExitOrder().getExecutionInfo().getDateTime()
+        BaseTestStrategy.onExitCanceled(self, position)
+        assert(position.isOpen())
+        assert(len(position.getActiveOrders()) == 0)
+        assert(position.getShares() != 0)
+
+    def onBars(self, bars):
+        dateTime = bars.getDateTime()
+
+        # Check position entry.
+        for meth, args, kwargs in strategy_test.get_by_datetime_or_date(self.__posEntry, dateTime):
+            if self.__activePosition is not None:
+                raise Exception("Only one position allowed at a time")
+            self.__activePosition = meth(*args, **kwargs)
+            self.positions.append(self.__activePosition)
+
+        # Check position exit.
+        for meth, args, kwargs in strategy_test.get_by_datetime_or_date(self.__posExit, dateTime):
+            if self.__activePosition is None:
+                raise Exception("A position was not entered")
+            meth(self.__activePosition, *args, **kwargs)
+            # self.__activePosition.exit(*args, **kwargs)
+
+
+class ForexEnterAndExitStrategy(BaseForexTestStrategy):
+    def onStart(self):
+        self.position = None
+
+    def onBars(self, bars):
+        if self.position is None:
+            self.position = self.enterLong(self.instrument, 1)
+        elif self.position.entryFilled() and not self.position.exitFilled():
+            self.position.exitMarket()
+
+
+class ForexDoubleExitStrategy(BaseForexTestStrategy):
+    def onStart(self):
+        self.position = None
+        self.doubleExit = False
+        self.doubleExitFailed = False
+
+    def onBars(self, bars):
+        if self.position is None:
+            self.position = self.enterLong(self.instrument, 1)
+        elif not self.doubleExit:
+            self.doubleExit = True
+            self.position.exitMarket()
+            try:
+                self.position.exit()
+            except Exception:
+                self.doubleExitFailed = True
+
+
+class ForexCancelEntryStrategy(BaseForexTestStrategy):
+    def onStart(self):
+        self.position = None
+
+    def onBars(self, bars):
+        if self.position is None:
+            self.position = self.enterLong(self.instrument, 1)
+            self.position.cancelEntry()
+
+
+class ForexExitEntryNotFilledStrategy(BaseForexTestStrategy):
+    def onStart(self):
+        self.position = None
+
+    def onBars(self, bars):
+        if self.position is None:
+            self.position = self.enterLong(self.instrument, 1)
+            self.position.exit()
+
+
+class ForexResubmitExitStrategy(BaseForexTestStrategy):
     def onStart(self):
         self.position = None
         self.exitRequestCanceled = False
@@ -1039,6 +1239,7 @@ class StopPosTestCase(BaseTestCase):
 
         strat.addPosEntry(datetime.datetime(2000, 11, 10), strat.enterLongStop, BaseTestCase.TestInstrument, 25, 1)
         strat.addPosExitStop(datetime.datetime(2000, 11, 16), 26)
+        #strat.addPosTakeProfit(datetime.datetime(2000, 11, 16), 26)
         strat.run()
 
         self.assertEqual(strat.enterOkCalls, 1)
@@ -1316,3 +1517,7 @@ class StopLimitPosTestCase(BaseTestCase):
         self.assertEqual(strat.exitOkCalls, 1)
         self.assertTrue(strat.exitCanceledCalls == 0)
         self.assertTrue(round(strat.getBroker().getCash(), 2) == round(1000 + (29 - 24), 2))
+        
+if __name__ == '__main__':
+    import unittest
+    unittest.main()
