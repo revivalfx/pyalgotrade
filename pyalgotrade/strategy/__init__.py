@@ -643,10 +643,8 @@ class ForexBacktestingStrategy(BaseStrategy):
         return self.__useAdjustedValues
 
     def setUseAdjustedValues(self, useAdjusted):
-        self.getFeed().setUseAdjustedValues(useAdjusted)
-        self.getBroker().setUseAdjustedValues(useAdjusted, True)
-        self.__useAdjustedValues = useAdjusted
-
+        pass
+    
     def setDebugMode(self, debugOn):
         """Enable/disable debug level messages in the strategy and backtesting broker.
         This is enabled by default."""
@@ -664,4 +662,4 @@ class ForexStrategy(ForexBacktestingStrategy):
     def __init__(self, *args, **kwargs):
         # Deprecated since v0.13
         warninghelpers.deprecation_warning("Strategy class will be deprecated in the next version. Please use BaseStrategy or BacktestingStrategy instead.", stacklevel=2)
-        BacktestingStrategy.__init__(self, *args, **kwargs)
+        ForexBacktestingStrategy.__init__(self, *args, **kwargs)

@@ -163,13 +163,8 @@ class GenericRowParser(RowParser):
         low = float(csvRowDict[self.__lowColName])
         close = float(csvRowDict[self.__closeColName])
         volume = float(csvRowDict[self.__volumeColName])
-        adjClose = None
-        if self.__adjCloseColName is not None:
-            adjCloseValue = csvRowDict.get(self.__adjCloseColName, "")
-            if len(adjCloseValue) > 0:
-                adjClose = float(adjCloseValue)
-                self.__haveAdjClose = True
-        return bar.BasicBar(dateTime, open_, high, low, close, volume, adjClose, self.__frequency)
+
+        return bar.BasicForexBar(dateTime, open_, high, low, close, volume, self.__frequency)
 
 
 class GenericBarFeed(BarFeed):
@@ -204,7 +199,7 @@ class GenericBarFeed(BarFeed):
 
         self.__dateTimeFormat = "%Y-%m-%d %H:%M:%S"
         self.__columnNames = {
-            "datetime": "Date Time",
+            "datetime": "Datetimestamp",
             "open": "Open",
             "high": "High",
             "low": "Low",

@@ -249,7 +249,7 @@ class ForexResubmitExitStrategy(BaseForexTestStrategy):
                 self.exitRequestCanceled = True
 
 class ForexBaseTestCase(common.TestCase):
-    TestInstrument = "doesntmatter"
+    TestInstrument = "ForexBaseTestCase"
 
     def loadIntradayBarFeed(self):
         fromMonth = 1

@@ -375,7 +375,7 @@ class Broker(broker.Broker):
             else:
                 assert(False)
         else:
-            self.__logger.debug("Not enough cash to fill %s order [%s] for %s share/s" % (
+            self.__logger.debug("Broker::commitOrderExecution: Not enough cash to fill %s order [%s] for %s share/s" % (
                 order.getInstrument(),
                 order.getId(),
                 order.getRemaining()
@@ -739,7 +739,7 @@ class ForexBroker(Broker):
             else:
                 assert(False)
         else:
-            self.__logger.debug("Not enough cash to fill %s order [%s] for %s share/s" % (
+            self.__logger.debug("ForexBroker::commitOrderExecution: Not enough cash to fill %s order [%s] for %s share/s" % (
                 order.getInstrument(),
                 order.getId(),
                 order.getRemaining()

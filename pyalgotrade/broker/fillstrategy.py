@@ -316,7 +316,7 @@ class DefaultStrategy(FillStrategy):
         fillSize = self.__calculateFillSize(broker_, order, bar)
         if fillSize == 0:
             broker_.getLogger().debug(
-                "Not enough volume to fill %s market order [%s] for %s share/s" % (
+                "DefaultStrategy::fillMarketOrder(): Not enough volume to fill %s market order [%s] for %s share/s" % (
                     order.getInstrument(),
                     order.getId(),
                     order.getRemaining()
@@ -342,7 +342,7 @@ class DefaultStrategy(FillStrategy):
         # Calculate the fill size for the order.
         fillSize = self.__calculateFillSize(broker_, order, bar)
         if fillSize == 0:
-            broker_.getLogger().debug("Not enough volume to fill %s limit order [%s] for %s share/s" % (
+            broker_.getLogger().debug("DefaultStrategy::fillLimitOrder(): Not enough volume to fill %s limit order [%s] for %s share/s" % (
                 order.getInstrument(), order.getId(), order.getRemaining())
             )
             return None
@@ -372,7 +372,7 @@ class DefaultStrategy(FillStrategy):
             # Calculate the fill size for the order.
             fillSize = self.__calculateFillSize(broker_, order, bar)
             if fillSize == 0:
-                broker_.getLogger().debug("Not enough volume to fill %s stop order [%s] for %s share/s" % (
+                broker_.getLogger().debug("DefaultStrategy::fillStopOrder(): Not enough volume to fill %s stop order [%s] for %s share/s" % (
                     order.getInstrument(),
                     order.getId(),
                     order.getRemaining()
@@ -414,7 +414,7 @@ class DefaultStrategy(FillStrategy):
             # Calculate the fill size for the order.
             fillSize = self.__calculateFillSize(broker_, order, bar)
             if fillSize == 0:
-                broker_.getLogger().debug("Not enough volume to fill %s stop limit order [%s] for %s share/s" % (
+                broker_.getLogger().debug("DefaultStrategy::fillStopLimitOrder(): Not enough volume to fill %s stop limit order [%s] for %s share/s" % (
                     order.getInstrument(),
                     order.getId(),
                     order.getRemaining()

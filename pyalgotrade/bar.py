@@ -259,6 +259,124 @@ class BasicBar(Bar):
         else:
             return self.__close
 
+class BasicForexBar(Bar):
+    # Optimization to reduce memory footprint.
+    __slots__ = (
+        '__dateTime',
+        '__open',
+        '__close',
+        '__high',
+        '__low',
+        '__volume',
+        '__frequency',
+        '__useAdjustedValue'
+    )
+
+    def __init__(self, dateTime, open_, high, low, close, volume, frequency):
+        if high < low:
+            raise Exception("high < low on %s" % (dateTime))
+        elif high < open_:
+            raise Exception("high < open on %s" % (dateTime))
+        elif high < close:
+            raise Exception("high < close on %s" % (dateTime))
+        elif low > open_:
+            raise Exception("low > open on %s" % (dateTime))
+        elif low > close:
+            raise Exception("low > close on %s" % (dateTime))
+
+        self.__dateTime = dateTime
+        self.__open = open_
+        self.__close = close
+        self.__high = high
+        self.__low = low
+        self.__volume = volume
+        self.__frequency = frequency
+        self.__useAdjustedValue = False
+
+    def __setstate__(self, state):
+        (self.__dateTime,
+            self.__open,
+            self.__close,
+            self.__high,
+            self.__low,
+            self.__volume,
+            self.__adjClose,
+            self.__frequency,
+            self.__useAdjustedValue) = state
+
+    def __getstate__(self):
+        return (
+            self.__dateTime,
+            self.__open,
+            self.__close,
+            self.__high,
+            self.__low,
+            self.__volume,
+            self.__adjClose,
+            self.__frequency,
+            self.__useAdjustedValue
+        )
+
+    def setUseAdjustedValue(self):
+        pass
+    
+    def getUseAdjValue(self):
+        pass
+
+    def getDateTime(self):
+        return self.__dateTime
+
+    def getOpen(self):
+        return self.__open
+
+    def getHigh(self):
+        return self.__high
+
+    def getLow(self):
+        return self.__low
+
+    def getClose(self):
+        return self.__close
+
+    def getVolume(self):
+        return self.__volume
+
+    def getAdjOpen(self):
+        # Deprecated in 0.15
+        warninghelpers.deprecation_warning(
+            "The getAdjOpen method will be deprecated in the next version. "
+            "Please use the getOpen(True) instead.",
+            stacklevel=2
+        )
+        return self.getOpen(True)
+
+    def getAdjHigh(self):
+        # Deprecated in 0.15
+        warninghelpers.deprecation_warning(
+            "The getAdjHigh method will be deprecated in the next version. "
+            "Please use the getHigh(True) instead.",
+            stacklevel=2
+        )
+        return self.getHigh(True)
+
+    def getAdjLow(self):
+        # Deprecated in 0.15
+        warninghelpers.deprecation_warning(
+            "The getAdjLow method will be deprecated in the next version. "
+            "Please use the getLow(True) instead.",
+            stacklevel=2
+        )
+        return self.getLow(True)
+
+    def getAdjClose(self):
+        pass
+
+    def getFrequency(self):
+        return self.__frequency
+
+    def getPrice(self):
+        return self.__close
+
 
 class Bars(object):
 

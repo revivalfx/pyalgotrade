@@ -426,9 +426,10 @@ class StopLimitOrder(Order):
 
 class OrderExecutionInfo(object):
     """Execution information for an order."""
-    def __init__(self, price, quantity, commission, dateTime):
+    def __init__(self, price, quantity, commission, dateTime, lotSize=0):
         self.__price = price
         self.__quantity = quantity
+        self.__lotSize = lotSize
         self.__commission = commission
         self.__dateTime = dateTime
 
@@ -442,6 +443,10 @@ class OrderExecutionInfo(object):
     def getQuantity(self):
         """Returns the quantity."""
         return self.__quantity
+
+    def getLotSize(self):
+        """Returns the lotSize."""
+        return self.__lotSize
 
     def getCommission(self):
         """Returns the commission applied."""
