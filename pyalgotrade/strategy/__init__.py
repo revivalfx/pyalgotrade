@@ -45,7 +45,7 @@ class BaseStrategy(object):
 
     __metaclass__ = abc.ABCMeta
 
-    LOGGER_NAME = "strategy"
+    LOGGER_NAME = "BaseStrategy"
 
     def __init__(self, barFeed, broker):
         self.__barFeed = barFeed
@@ -582,6 +582,7 @@ class BacktestingStrategy(BaseStrategy):
     .. note::
         This is a base class and should not be used directly.
     """
+    LOGGER_NAME = "BacktestingStrategy"
 
     def __init__(self, barFeed, cash_or_brk=1000000):
         # The broker should subscribe to barFeed events before the strategy.
@@ -593,6 +594,8 @@ class BacktestingStrategy(BaseStrategy):
             broker = backtesting.Broker(cash_or_brk, barFeed)
 
         BaseStrategy.__init__(self, barFeed, broker)
+        self.__logger = None
+        #self.__logger = logger.getLogger("BacktestingStrategy")
         self.__useAdjustedValues = False
         self.setUseEventDateTimeInLogs(True)
         self.setDebugMode(True)
@@ -604,6 +607,11 @@ class BacktestingStrategy(BaseStrategy):
         self.getFeed().setUseAdjustedValues(useAdjusted)
         self.getBroker().setUseAdjustedValues(useAdjusted, True)
         self.__useAdjustedValues = useAdjusted
+
+    def getLogger(self):
+        if self.__logger == None:
+            self.__logger = logger.getLogger(BacktestingStrategy.LOGGER_NAME)        
+        return self.__logger
 
     def setDebugMode(self, debugOn):
         """Enable/disable debug level messages in the strategy and backtesting broker.
@@ -624,6 +632,7 @@ class ForexBacktestingStrategy(BaseStrategy):
     .. note::
         This is a base class and should not be used directly.
     """
+    LOGGER_NAME = "ForexBacktestingStrategy"
 
     def __init__(self, barFeed, cash_or_brk=1000000):
         # The broker should subscribe to barFeed events before the strategy.
@@ -635,9 +644,16 @@ class ForexBacktestingStrategy(BaseStrategy):
             broker = backtesting.ForexBroker(cash_or_brk, barFeed)
 
         BaseStrategy.__init__(self, barFeed, broker)
+        self.__logger = None
+        
         self.__useAdjustedValues = False
         self.setUseEventDateTimeInLogs(True)
         self.setDebugMode(True)
+
+    def getLogger(self):
+        if self.__logger == None:
+            self.__logger = logger.getLogger(ForexBacktestingStrategy.LOGGER_NAME)        
+        return self.__logger
 
     def getUseAdjustedValues(self):
         return self.__useAdjustedValues
