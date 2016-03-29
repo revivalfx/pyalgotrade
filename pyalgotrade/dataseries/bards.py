@@ -48,7 +48,8 @@ class BarDataSeries(dataseries.SequenceDataSeries):
     def appendWithDateTime(self, dateTime, bar):
         assert(dateTime is not None)
         assert(bar is not None)
-        bar.setUseAdjustedValue(self.__useAdjustedValues)
+        if(hasattr(bar, 'setUseAdjustedValue')):
+            bar.setUseAdjustedValue(self.__useAdjustedValues)
         dataseries.SequenceDataSeries.appendWithDateTime(self, dateTime, bar)
         self.__openDS.appendWithDateTime(dateTime, bar.getOpen())
         self.__closeDS.appendWithDateTime(dateTime, bar.getClose())

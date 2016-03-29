@@ -317,7 +317,7 @@ class BasicForexBar(Bar):
             self.__useAdjustedValue
         )
 
-    def setUseAdjustedValue(self):
+    def setUseAdjustedValue(self, blank=False):
         pass
     
     def getUseAdjValue(self):
@@ -326,16 +326,16 @@ class BasicForexBar(Bar):
     def getDateTime(self):
         return self.__dateTime
 
-    def getOpen(self):
+    def getOpen(self, blank=False):
         return self.__open
 
-    def getHigh(self):
+    def getHigh(self, blank=False):
         return self.__high
 
-    def getLow(self):
+    def getLow(self, blank=False):
         return self.__low
 
-    def getClose(self):
+    def getClose(self, blank=False):
         return self.__close
 
     def getVolume(self):
