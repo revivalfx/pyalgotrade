@@ -62,6 +62,10 @@ class DataSeries(object):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def getValues(self, ):
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def getDateTimes(self):
         """Returns a list of :class:`datetime.datetime` associated with each value."""
         raise NotImplementedError()
@@ -110,6 +114,9 @@ class SequenceDataSeries(DataSeries):
         if pos >= 0 and pos < len(self.__values):
             ret = self.__values[pos]
         return ret
+
+    def getValues(self, ):
+        return self.__values
 
     def append(self, value):
         """Appends a value."""

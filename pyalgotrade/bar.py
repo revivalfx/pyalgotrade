@@ -40,7 +40,13 @@ class Frequency(object):
     TRADE = -1
     SECOND = 1
     MINUTE = 60
+    M5 = 5*MINUTE
+    M15 = 3*M5
+    M30 = 2*M15
     HOUR = 60*60
+    H1 = HOUR
+    H4 = 4*HOUR
+    H8 = 2*H4
     DAY = 24*60*60
     WEEK = 24*60*60*7
     MONTH = 24*60*60*31
